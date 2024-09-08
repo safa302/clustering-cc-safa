@@ -4,7 +4,7 @@ import numpy as np
 
 # Load model dan scaler dari file pickle
 with open('kmeans_model.pkl', 'rb') as model_file:
-    kmeans = pickle.load(model_file)
+    kmeans = pickle.load( )
 
 with open('scaler.pkl', 'rb') as scaler_file:
     scaler = pickle.load(scaler_file)
