@@ -1,59 +1,35 @@
 import streamlit as st
-import pandas as pd
 import pickle
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+import numpy as np
+
+# Load model dan scaler dari file pickle
+with open('kmeans_model.pkl', 'rb') as model_file:
+    kmeans = pickle.load(model_file)
+
+with open('scaler.pkl', 'rb') as scaler_file:
+    scaler = pickle.load(scaler_file)
 
 # Judul aplikasi
-st.title("Clustering Credit Card Data")
+st.title("Aplikasi Prediksi Klaster Kartu Kredit")
 
-# Instruksi
-st.write("Unggah file dataset CSV untuk melakukan klasterisasi menggunakan model KMeans yang sudah dilatih.")
+# Input data dari pengguna
+st.header("Input Data Nasabah")
+balance = st.number_input("Balance", min_value=0.0, max_value=1000000.0, step=1000.0)
+purchases = st.number_input("Purchases", min_value=0.0, max_value=1000000.0, step=1000.0)
+cash_advance = st.number_input("Cash Advance", min_value=0.0, max_value=1000000.0, step=1000.0)
+credit_limit = st.number_input("Credit Limit", min_value=0.0, max_value=100000.0, step=1000.0)
+payments = st.number_input("Payments", min_value=0.0, max_value=100000.0, step=1000.0)
 
-# Fungsi untuk load model dan scaler dari file pickle
-@st.cache
-def load_model():
-    with open('kmeans_model.pkl', 'rb') as f:
-        kmeans_model = pickle.load(f)
-    with open('scaler.pkl', 'rb') as f:
-        scaler_model = pickle.load(f)
-    return kmeans_model, scaler_model
+# Jika tombol prediksi ditekan
+if st.button("Prediksi Klaster"):
+    # Data input dalam bentuk array
+    user_data = np.array([[balance, purchases, cash_advance, credit_limit, payments]])
 
-# Load model KMeans dan scaler
-kmeans_model, scaler_model = load_model()
+    # Normalisasi data input menggunakan scaler yang sama dengan model
+    scaled_data = scaler.transform(user_data)
 
-# Fungsi untuk menampilkan hasil evaluasi klasterisasi
-def evaluate_clustering(data_scaled, labels):
-    silhouette_avg = silhouette_score(data_scaled, labels)
-    db_index = davies_bouldin_score(data_scaled, labels)
-    ch_index = calinski_harabasz_score(data_scaled, labels)
-    return silhouette_avg, db_index, ch_index
+    # Prediksi klaster menggunakan model KMeans
+    cluster = kmeans.predict(scaled_data)
 
-# Upload dataset
-uploaded_file = st.file_uploader("Upload your cleaned dataset (CSV)", type=["csv"])
-
-if uploaded_file is not None:
-    # Baca dataset
-    df = pd.read_csv(uploaded_file)
-    st.write("Dataset yang diunggah:")
-    st.write(df.head())
-
-    # Proses data (cleaning dan scaling)
-    df_cleaned = df.drop(columns=['CUST_ID'], errors='ignore')  # Hapus CUST_ID jika ada
-    df_cleaned = df_cleaned.fillna(df_cleaned.median())  # Isi nilai kosong dengan median
-    data_scaled = scaler_model.transform(df_cleaned)  # Lakukan scaling pada data
-
-    # Prediksi klaster menggunakan model yang telah diload
-    predicted_clusters = kmeans_model.predict(data_scaled)
-    df['Cluster'] = predicted_clusters
-
-    # Tampilkan hasil klasterisasi
-    st.write("Hasil klasterisasi:")
-    st.write(df)
-
-    # Evaluasi klasterisasi
-    silhouette_avg, db_index, ch_index = evaluate_clustering(data_scaled, predicted_clusters)
-    st.write(f"Silhouette Score: {silhouette_avg:.4f}")
-    st.write(f"Davies-Bouldin Index: {db_index:.4f}")
-    st.write(f"Calinski-Harabasz Index: {ch_index:.4f}")
+    # Menampilkan hasil prediksi
+    st.success(f"Nasabah ini diprediksi berada di klaster: {cluster[0]}")
